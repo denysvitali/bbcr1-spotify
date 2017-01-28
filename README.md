@@ -8,7 +8,11 @@ TODO: Write installation instructions here
 
 ## Usage
 
-TODO: Write usage instructions here
+Warning: the project is still in development!
+
+1. [Create a new application](https://developer.spotify.com/my-applications/) on Spotify.com
+2. Put your client_id and client_secret in /credentials.yml
+3. Run `crystal run src/BBCR1_Spotify.cr`
 
 ## Development
 

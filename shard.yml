@@ -8,6 +8,10 @@ targets:
   bbcr1-spotify:
     main: src/bbcr1-spotify.cr
 
+dependencies:
+  spotify:
+    github: marceloboeira/spotify.cr
+    
 crystal: 0.20.5
 
 license: MIT
