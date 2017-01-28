@@ -1,6 +1,6 @@
 # bbcr1-spotify
 
-TODO: Write a description here
+Crystal app that adds every played song from BBC R1 to a Spotify playlist
 
 ## Installation
 
@@ -16,7 +16,7 @@ TODO: Write development instructions here
 
 ## Contributing
 
-1. Fork it ( https://github.com/[your-github-name]/bbcr1-spotify/fork )
+1. Fork it ( https://github.com/denysvitali/bbcr1-spotify/fork )
 2. Create your feature branch (git checkout -b my-new-feature)
 3. Commit your changes (git commit -am 'Add some feature')
 4. Push to the branch (git push origin my-new-feature)
@@ -24,4 +24,4 @@ TODO: Write development instructions here
 
 ## Contributors
 
-- [[your-github-name]](https://github.com/[your-github-name]) Denys Vitali - creator, maintainer
+- [denysvitali](https://github.com/denysvitali) Denys Vitali - creator, maintainer
