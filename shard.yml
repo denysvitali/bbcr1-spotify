@@ -1,0 +1,13 @@
+name: bbcr1-spotify
+version: 0.1.0
+
+authors:
+  - Denys Vitali <denys.vitali@coelis.ch>
+
+targets:
+  bbcr1-spotify:
+    main: src/bbcr1-spotify.cr
+
+crystal: 0.20.5
+
+license: MIT
