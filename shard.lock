@@ -1,0 +1,6 @@
+version: 1.0
+shards:
+  timeout:
+    github: hugoabonizio/timeout.cr
+    commit: 08d9d37cb107f462d9f58058cc81c28cef29838b
+
