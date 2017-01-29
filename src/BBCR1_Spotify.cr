@@ -5,79 +5,8 @@ require "http/client"
 require "http/server"
 require "base64"
 require "json"
-require "spotify"
-
-class QueryParams
-  @@params = {} of String => String
-
-  def self.new(input : Hash(String, String))
-    @@params = input
-    return self
-  end
-
-  def self.to_s
-    i = 0
-    str = String.build do |str|
-      @@params.each do |key, value|
-        i += 1
-        str << URI.escape(key)
-        str << "="
-        str << URI.escape(value)
-        if i != @@params.size
-          str << "&"
-        end
-      end
-    end
-  end
-end
-
-class SpotifyAPI
-  @@token = ""
-  ENDPOINT = "https://api.spotify.com/v1"
-
-  def initialize
-  end
-
-  def initialize(token : String)
-    @@token = token
-  end
-
-  def get(path : String)
-    headers = HTTP::Headers{
-      "Authorization" => "Bearer #{@@token}",
-    }
-    response = HTTP::Client.get("#{ENDPOINT}#{path}", headers: headers)
-    return response.body
-  end
-
-  def getJSON(path : String)
-    body = self.get(path)
-    return JSON.parse(body)
-  end
-
-  def post(path : String, headers : Hash(String, String), postData : Hash(String, String))
-    headers_f = HTTP::Headers{
-      "Authorization" => "Bearer #{@@token}",
-    }
-    headers.each do |key, value|
-      headers_f[key] = value
-    end
-    headers = nil
-
-    body = postData.to_json
-
-    response = HTTP::Client.post("#{ENDPOINT}#{path}", headers: headers_f, body: body)
-    return response.body
-  end
-
-  def post(path : String, headers : Hash(String, String), postData : Hash(String, String))
-    body = self.post(path, headers, postData)
-    return JSON.parse(body)
-  end
-end
 
 module BBCR1_Spotify
-  JSON_ENDPOINT         = "http://polling.bbc.co.uk/radio/realtime/bbc_radio_one.json"
   SPOTIFY_API_EP        = "https://accounts.spotify.com"
   CREDENTIALS_FILE      = "credentials.yml"
   DEFAULT_PLAYLIST_NAME = "BBCR1 Songs"
@@ -85,10 +14,11 @@ module BBCR1_Spotify
   @@client_id = ""
   @@client_secret = ""
   @@token = ""
-  @@sApi = SpotifyAPI.new
+  @@sApi = Spotify::API.new
   @@server = nil
   @@playlistId = ""
   @@myId = -1
+  @@lastTrack = ""
 
   def self.run
     if !File.file? CREDENTIALS_FILE
@@ -136,7 +66,13 @@ module BBCR1_Spotify
       end
     rescue ex : KeyError
       if @@token != ""
-        self.createPlaylist
+        playlist = self.createPlaylist
+        if playlist != ""
+          savePlaylist(playlist)
+        else
+          puts "ERROR: Unable to create playlist"
+          exit
+        end
       end
     end
 
@@ -151,40 +87,29 @@ module BBCR1_Spotify
 
   def self.theLoop
     puts "****"
-    if @@sApi
-      # puts @@sApi.get("/me/playlists")
+    song = BBCR1::CurrentSong.get
+    if song
+      if song.realtime
+        puts song.realtime.title
+        puts song.realtime.artist
+
+        title = song.realtime.title
+        artist = song.realtime.artist
+
+        if @@lastTrack != "#{artist} - #{title}"
+          @@lastTrack = "#{artist} - #{title}"
+          if @@sApi
+            puts @@playlistId
+            track = @@sApi.search(artist, title)
+            if track
+              @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
+            end
+          end
+        end
+      end
     end
-  end
-
-  class TokenResponse
-    JSON.mapping(
-      access_token: String,
-      token_type: String,
-      expires_in: Int32,
-      refresh_token: String | Nil,
-      scope: String
-    )
-  end
-
-  class TokenError
-    JSON.mapping(
-      error: String,
-      error_description: String | Nil
-    )
-  end
-
-  class AlbumResponse
-    JSON.mapping(
-      collaborative: Bool,
-      description: String | Nil,
-      external_urls: Hash(String, String),
-      followers: Hash(String, JSON::Any),
-      name: String,
-      public: Bool,
-      tracks: Hash(String, JSON::Any),
-      type: String,
-      uri: String
-    )
+    sleep 30
+    self.theLoop
   end
 
   def self.startServer(server : Nil)
@@ -256,9 +181,9 @@ module BBCR1_Spotify
     error = nil
 
     begin
-      token = TokenResponse.from_json(response.body)
+      token = Spotify::TokenResponse.from_json(response.body)
     rescue ex : JSON::ParseException
-      error = TokenError.from_json(response.body)
+      error = Spotify::TokenError.from_json(response.body)
     end
     if error
       puts "ERROR: Unable to get token!"
@@ -269,21 +194,19 @@ module BBCR1_Spotify
     end
   end
 
-  def self.saveToken(token : TokenResponse)
-    credentials = YAML.parse File.read(CREDENTIALS_FILE)
-    credentials = credentials.as_h
+  def self.saveToken(token : Spotify::TokenResponse)
+    credentials = self.getCred
     credentials["token"] = {
       "access_token"  => token.access_token,
       "refresh_token" => token.refresh_token,
     } of YAML::Type => YAML::Type
-    credentials = credentials.to_yaml
-    File.write(CREDENTIALS_FILE, credentials)
+    self.writeCred(credentials)
     @@token = token
     self.stopServer @@server
   end
 
   def self.checkToken(token : String, refresh_token : String)
-    sApi = SpotifyAPI.new(token)
+    sApi = Spotify::API.new(token)
     me = sApi.getJSON("/me")
     begin
       if me["error"]?
@@ -298,10 +221,19 @@ module BBCR1_Spotify
       end
     rescue ex
     end
-    puts me
     @@myId = me["id"].to_s.to_i { -1 }
     @@token = token
     @@sApi = sApi
+  end
+
+  def self.getCred
+    credentials = YAML.parse File.read(CREDENTIALS_FILE)
+    return credentials.as_h
+  end
+
+  def self.writeCred(cred : Hash(YAML::Type, YAML::Type))
+    credentials = cred.to_yaml
+    File.write(CREDENTIALS_FILE, credentials)
   end
 
   def self.createPlaylist
@@ -312,11 +244,19 @@ module BBCR1_Spotify
         "public" => "true",
       })
     begin
-      result = AlbumResponse.from_json(result)
-      puts result
+      album = Spotify::AlbumResponse.from_json(result)
+      return album.id
     rescue ex : JSON::ParseException
       puts "ERROR: Unable to create playlist: #{ex}"
     end
+    ""
+  end
+
+  def self.savePlaylist(id : String)
+    credentials = self.getCred
+    credentials["playlist"] = id
+    self.writeCred(credentials)
+    @@playlistId = id
   end
 
   self.run

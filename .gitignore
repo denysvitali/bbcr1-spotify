@@ -4,3 +4,4 @@
 /.shards/
 /shard.lock
 /credentials.yml
+/account.yml
