@@ -88,6 +88,7 @@ module BBCR1_Spotify
   def self.theLoop
     puts "****"
     song = BBCR1::CurrentSong.get
+    self.checkAndRefresh
     if song
       if song.realtime
         puts song.realtime.title
@@ -163,8 +164,18 @@ module BBCR1_Spotify
     startServer @@server
   end
 
-  def self.refreshToken(rtoken)
+  def self.refreshToken(token : Array(YAML::Type))
+    puts typeof(token)
+    #self.refreshToken(token["refresh_token"])
+  end
+
+  def self.refreshToken(rtoken : String)
     self.getToken(rtoken, "refresh")
+  end
+
+  def self.refreshToken(token)
+    puts typeof(token)
+    puts token
   end
 
   def self.getToken(code, gtype = "auth")
@@ -209,13 +220,24 @@ module BBCR1_Spotify
 
   def self.saveToken(token : Spotify::TokenResponse)
     credentials = self.getCred
+    if token.refresh_token == nil
+     token.refresh_token = self.getRefreshToken(credentials["token"])
+    end
     credentials["token"] = {
       "access_token"  => token.access_token,
       "refresh_token" => token.refresh_token,
     } of YAML::Type => YAML::Type
     self.writeCred(credentials)
-    @@token = token
+    @@token = token.access_token
     self.stopServer @@server
+  end
+
+  def self.getRefreshToken(token : Hash(YAML::Type, YAML::Type))
+    token["refresh_token"].to_s
+  end
+
+  def self.getRefreshToken(token)
+    ""
   end
 
   def self.checkToken(token : String, refresh_token : String)
@@ -227,6 +249,8 @@ module BBCR1_Spotify
         if refresh_token != ""
           puts "Refreshing token"
           self.refreshToken refresh_token
+          self.checkToken(@@token, "")
+          return
         else
           puts "Token + Refresh Token expired! Please, reauthenticate"
           self.authorize
@@ -237,6 +261,20 @@ module BBCR1_Spotify
     @@myId = me["id"].to_s.to_i { -1 }
     @@token = token
     @@sApi = sApi
+  end
+
+  def self.checkAndRefresh
+    if @@sApi
+      result = @@sApi.get("/me")
+      begin
+        if result["id"] != nil
+          # No need to refresh
+        end
+      rescue ex : JSON::ParseException
+        cred = self.getCred()
+        self.refreshToken(cred["token"])
+      end
+    end
   end
 
   def self.getCred
