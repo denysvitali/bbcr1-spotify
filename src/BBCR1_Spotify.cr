@@ -95,21 +95,23 @@ module BBCR1_Spotify
         puts song.realtime.artist
 
         title = song.realtime.title
+
         artist = song.realtime.artist
+        artist_clean = artist.gsub(/ & /, ",")
 
         if @@lastTrack != "#{artist} - #{title}"
           @@lastTrack = "#{artist} - #{title}"
           if @@sApi
             puts @@playlistId
 
-            track = @@sApi.search(artist, title)
+            track = @@sApi.search(artist_clean, title)
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
               puts "Adding #{track.name} by #{track.artists[0].name}"
             else
               title_clean = title.match(/[^()]+/)
               if title_clean
-                track = @@sApi.search(artist, title_clean[0])
+                track = @@sApi.search(artist_clean, title_clean[0])
                 if track
                   @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
                   puts "Adding #{track.name} by #{track.artists[0].name}"
@@ -268,13 +270,18 @@ module BBCR1_Spotify
   def self.checkAndRefresh
     if @@sApi
       result = @@sApi.get("/me")
-      begin
-        if result["id"] != nil
-          # No need to refresh
+      if result
+        begin
+          if result["id"] != nil
+            # No need to refresh
+          end
+        rescue ex : JSON::ParseException
+          cred = self.getCred()
+          self.refreshToken(cred["token"])
         end
-      rescue ex : JSON::ParseException
-        cred = self.getCred()
-        self.refreshToken(cred["token"])
+      else
+        sleep 5
+        self.checkAndRefresh
       end
     end
   end
