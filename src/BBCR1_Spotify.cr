@@ -105,12 +105,14 @@ module BBCR1_Spotify
             track = @@sApi.search(artist, title)
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
+              puts "Adding #{track.name} by #{track.artists[0].name}"
             else
               title_clean = title.match(/[^()]+/)
               if title_clean
                 track = @@sApi.search(artist, title_clean[0])
                 if track
                   @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
+                  puts "Adding #{track.name} by #{track.artists[0].name}"
                 else
                   puts "Unable to find #{artist} - #{title}"
                 end
