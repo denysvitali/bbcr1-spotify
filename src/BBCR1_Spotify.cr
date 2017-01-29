@@ -274,6 +274,7 @@ module BBCR1_Spotify
         begin
           if result["id"] != nil
             # No need to refresh
+            return nil
           end
         rescue ex : JSON::ParseException
           cred = self.getCred()
