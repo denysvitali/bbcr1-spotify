@@ -100,9 +100,22 @@ module BBCR1_Spotify
           @@lastTrack = "#{artist} - #{title}"
           if @@sApi
             puts @@playlistId
+
             track = @@sApi.search(artist, title)
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
+            else
+              title_clean = title.match(/[^()]+/)
+              if title_clean
+                track = @@sApi.search(artist, title_clean[0])
+                if track
+                  @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
+                else
+                  puts "Unable to find #{artist} - #{title}"
+                end
+              else
+                puts "Unable to clean title"
+              end
             end
           end
         end
