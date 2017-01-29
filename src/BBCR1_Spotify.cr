@@ -102,8 +102,6 @@ module BBCR1_Spotify
         if @@lastTrack != "#{artist} - #{title}"
           @@lastTrack = "#{artist} - #{title}"
           if @@sApi
-            puts @@playlistId
-
             track = @@sApi.search(artist_clean, title)
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
@@ -168,22 +166,16 @@ module BBCR1_Spotify
     startServer @@server
   end
 
-  def self.refreshToken(token : Array(YAML::Type))
-    puts typeof(token)
-    #self.refreshToken(token["refresh_token"])
+  def self.refreshToken(token : String)
+    self.getToken(token, "refresh")
   end
 
-  def self.refreshToken(rtoken : String)
-    self.getToken(rtoken, "refresh")
-  end
-
-  def self.refreshToken(token)
-    puts typeof(token)
-    puts token
+  def self.refreshToken(token : Credentials::Token)
+    self.getToken(token.refresh_token, "refresh")
   end
 
   def self.getToken(code, gtype = "auth")
-    puts "GetToken #{gtype} #{@@client_id}:#{@@client_secret}"
+    puts "GetToken #{gtype} #{code}-#{gtype}"
 
     if gtype == "auth"
       body = {
@@ -219,29 +211,25 @@ module BBCR1_Spotify
     end
     if token
       self.saveToken token
+    else
+      puts "Cannot get token"
     end
   end
 
   def self.saveToken(token : Spotify::TokenResponse)
     credentials = self.getCred
     if token.refresh_token == nil
-     token.refresh_token = self.getRefreshToken(credentials["token"])
+      token.refresh_token = credentials.token.refresh_token
     end
-    credentials["token"] = {
-      "access_token"  => token.access_token,
-      "refresh_token" => token.refresh_token,
-    } of YAML::Type => YAML::Type
+    credentials.token.access_token = token.access_token
+    credentials.token.refresh_token = token.refresh_token
+
     self.writeCred(credentials)
     @@token = token.access_token
+    if @@sApi
+      @@sApi.setToken(@@token)
+    end
     self.stopServer @@server
-  end
-
-  def self.getRefreshToken(token : Hash(YAML::Type, YAML::Type))
-    token["refresh_token"].to_s
-  end
-
-  def self.getRefreshToken(token)
-    ""
   end
 
   def self.checkToken(token : String, refresh_token : String)
@@ -259,27 +247,30 @@ module BBCR1_Spotify
           puts "Token + Refresh Token expired! Please, reauthenticate"
           self.authorize
         end
+      else
+        @@myId = me["id"].to_s.to_i { -1 }
+        @@token = token
+        @@sApi = sApi
       end
     rescue ex
     end
-    @@myId = me["id"].to_s.to_i { -1 }
-    @@token = token
-    @@sApi = sApi
   end
 
   def self.checkAndRefresh
     if @@sApi
-      result = @@sApi.get("/me")
+      result = @@sApi.getJSON("/me")
       if result
         begin
-          if result["id"] != nil
+          if result["id"]
             # No need to refresh
             return nil
           end
-        rescue ex : JSON::ParseException
-          cred = self.getCred()
-          self.refreshToken(cred["token"])
+        rescue ex
+          # puts "Nil ass. failed? #{ex} #{result}"
         end
+
+        cred = self.getCred
+        self.refreshToken(cred.token)
       else
         sleep 5
         self.checkAndRefresh
@@ -288,11 +279,10 @@ module BBCR1_Spotify
   end
 
   def self.getCred
-    credentials = YAML.parse File.read(CREDENTIALS_FILE)
-    return credentials.as_h
+    Credentials.from_yaml File.read(CREDENTIALS_FILE)
   end
 
-  def self.writeCred(cred : Hash(YAML::Type, YAML::Type))
+  def self.writeCred(cred : Credentials)
     credentials = cred.to_yaml
     File.write(CREDENTIALS_FILE, credentials)
   end
@@ -315,7 +305,7 @@ module BBCR1_Spotify
 
   def self.savePlaylist(id : String)
     credentials = self.getCred
-    credentials["playlist"] = id
+    credentials.playlist = id
     self.writeCred(credentials)
     @@playlistId = id
   end

@@ -13,6 +13,10 @@ module Spotify
       @@token = token
     end
 
+    def setToken(token : String)
+      @@token = token
+    end
+
     def get(path : String)
       headers = HTTP::Headers{
         "Authorization" => "Bearer #{@@token}",
