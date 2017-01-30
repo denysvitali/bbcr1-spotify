@@ -98,11 +98,16 @@ module BBCR1_Spotify
 
         artist = song.realtime.artist
         artist_clean = artist.gsub(/ & /, ",")
+        title_clean = title.match(/[^(feat.+)]+/)
 
         if @@lastTrack != "#{artist} - #{title}"
           @@lastTrack = "#{artist} - #{title}"
           if @@sApi
-            track = @@sApi.search(artist_clean, title)
+            if title_clean
+              track = @@sApi.search(artist_clean, title_clean[0])
+            else
+              track = @@sApi.search(artist_clean, title)
+            end
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
               puts "Adding #{track.name} by #{track.artists[0].name}"
