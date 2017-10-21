@@ -98,9 +98,24 @@ module BBCR1_Spotify
         title = song.realtime.title
         artist = song.realtime.artist
 
+        # DEBUG
+        #title = "Alone (Toddla T Remix)"
+        #artist = "Jessie Ware"
+
 
         artist_clean = artist.gsub(/ & /, ",")
         title_clean = title.match(/^(.*?)(feat\.).*$/)
+        if title_clean
+          title_clean_content = title_clean[1];
+        else
+          title_clean_content = title;
+        end
+        
+        title_clean_content = title_clean_content.gsub("(", "");
+        title_clean_content = title_clean_content.gsub(")", "");
+        title_clean_content = title_clean_content.gsub("-", "");
+
+        puts title_clean_content
 
         if @@lastTrack != "#{artist} - #{title}"
           @@lastTrack = "#{artist} - #{title}"
@@ -120,7 +135,7 @@ module BBCR1_Spotify
 
               title_clean = title.match(/[^()]+/)
               if title_clean
-                track = @@sApi.search(artist_clean, title_clean[0])
+                track = @@sApi.search(artist_clean, title_clean_content)
                 if track
                   @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
                   puts "Adding #{track.name} by #{track.artists[0].name}"

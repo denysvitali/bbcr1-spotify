@@ -64,7 +64,7 @@ module Spotify
     end
 
     def search(artist : String, title : String)
-      query = "artist:#{artist} track:#{title}"
+      query = "artist:#{artist} #{title}"
       result = self.get("/search?q=#{URI.escape query}&type=track")
       begin
         sr = Spotify::SearchResult.from_json(result)
@@ -74,6 +74,7 @@ module Spotify
           return nil
         end
       rescue ex : JSON::ParseException
+        puts "JSON Parsing failed: #{ex}"
         return nil
       end
     end
