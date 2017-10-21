@@ -94,24 +94,30 @@ module BBCR1_Spotify
         puts song.realtime.title
         puts song.realtime.artist
 
+        
         title = song.realtime.title
-
         artist = song.realtime.artist
+
+
         artist_clean = artist.gsub(/ & /, ",")
-        title_clean = title.match(/[^(feat.+)]+/)
+        title_clean = title.match(/^(.*?)(feat\.).*$/)
 
         if @@lastTrack != "#{artist} - #{title}"
           @@lastTrack = "#{artist} - #{title}"
           if @@sApi
             if title_clean
+              puts title_clean
               track = @@sApi.search(artist_clean, title_clean[0])
             else
-              track = @@sApi.search(artist_clean, title)
+              track = @@sApi.search(artist, title)
             end
+
             if track
               @@sApi.addTrackToPlaylist(track, @@myId, @@playlistId)
               puts "Adding #{track.name} by #{track.artists[0].name}"
             else
+              # Track not found on first try, cleaning the title - maybe we get a match
+
               title_clean = title.match(/[^()]+/)
               if title_clean
                 track = @@sApi.search(artist_clean, title_clean[0])
