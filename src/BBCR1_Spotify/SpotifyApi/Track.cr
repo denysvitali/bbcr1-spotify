@@ -15,7 +15,7 @@ module Spotify
       id: String,
       name: String,
       popularity: Int32,
-      preview_url: String,
+      preview_url: {type: String, nilable: true},
       track_number: Int32,
       type: String,
       uri: String
