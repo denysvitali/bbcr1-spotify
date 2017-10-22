@@ -4,7 +4,7 @@ Crystal app that adds every played song from BBC R1 to a Spotify playlist
 
 ## Demo
 
-You can see an automatically generated playlist [here](https://open.spotify.com/user/1194450862/playlist/2PfWoub4VBtfauN0JDvIoO) and
+You can see an automatically generated playlist [here](https://open.spotify.com/user/1194450862/playlist/4k6Nz68UEaUPjTW3Ffh8qj) and
 you can follow it if you want
 
 ## Usage
